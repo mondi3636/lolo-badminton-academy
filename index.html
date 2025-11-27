@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Badminton Academy</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .tab { display: none; }
+        .active { display: block; }
+        button { margin: 5px; padding: 10px; }
+        input { margin: 5px; padding: 8px; }
+        .player { background: #f0f0f0; padding: 10px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🏸 Badminton Academy</h1>
+    
+    <button onclick="showTab('players')">Players</button>
+    <button onclick="showTab('attendance')">Attendance</button>
+    <button onclick="showTab('fees')">Fees</button>
+    
+    <!-- Players Tab -->
+    <div id="players" class="tab active">
+        <h2>Players</h2>
+        <input id="name" placeholder="Name">
+        <input id="age" placeholder="Age" type="number">
+        <button onclick="addPlayer()">Add Player</button>
+        <div id="playerList"></div>
+    </div>
+    
+    <!-- Attendance Tab -->
+    <div id="attendance" class="tab">
+        <h2>Attendance</h2>
+        <input type="date" id="attDate">
+        <div id="attPlayers"></div>
+        <button onclick="saveAttendance()">Save</button>
+    </div>
+    
+    <!-- Fees Tab -->
+    <div id="fees" class="tab">
+        <h2>Fees</h2>
+        <select id="month">
+            <option>Jan</option><option>Feb</option><option>Mar</option>
+            <!-- Add more months -->
+        </select>
+        <div id="feesList"></div>
+    </div>
+
+    <script>
+        let players = JSON.parse(localStorage.getItem('players')) || [];
+        
+        function showTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            if(tabName === 'players') showPlayers();
+            if(tabName === 'attendance') showAttendance();
+            if(tabName === 'fees') showFees();
+        }
+        
+        function addPlayer() {
+            players.push({
+                id: Date.now(),
+                name: document.getElementById('name').value,
+                age: document.getElementById('age').value
+            });
+            localStorage.setItem('players', JSON.stringify(players));
+            showPlayers();
+        }
+        
+        function showPlayers() {
+            document.getElementById('playerList').innerHTML = players.map(player => 
+                `<div class="player">${player.name} (Age: ${player.age})</div>`
+            ).join('');
+        }
+        
+        function showAttendance() {
+            let html = '';
+            players.forEach(player => {
+                html += `<div><input type="checkbox" id="att-${player.id}"> ${player.name}</div>`;
+            });
+            document.getElementById('attPlayers').innerHTML = html;
+        }
+        
+        showTab('players');
+    </script>
+</body>
+</html>
