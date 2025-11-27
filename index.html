@@ -1,88 +1,139 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Academy</title>
-    <style>
-        body { font-family: Arial; margin: 20px; }
-        .tab { display: none; }
-        .active { display: block; }
-        button { margin: 5px; padding: 10px; }
-        input { margin: 5px; padding: 8px; }
-        .player { background: #f0f0f0; padding: 10px; margin: 5px; }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>LOLO Badminton Academy</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; max-width:900px; margin:20px auto; padding:0 16px; }
+    header { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+    h1 { margin:0; font-size:20px; }
+    table { width:100%; border-collapse:collapse; margin-top:12px; }
+    th, td { border:1px solid #ddd; padding:8px; text-align:left; }
+    th { background:#f3f3f3; }
+    .small { font-size:13px; color:#666; }
+    .controls { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+    button { padding:8px 10px; border-radius:6px; border:1px solid #ccc; background:#fff; cursor:pointer; }
+    input[type="search"] { padding:8px; border-radius:6px; border:1px solid #ccc; width:220px; }
+    .note { margin-top:12px; font-size:13px; color:#444; }
+  </style>
 </head>
 <body>
-    <h1>🏸 Badminton Academy</h1>
-    
-    <button onclick="showTab('players')">Players</button>
-    <button onclick="showTab('attendance')">Attendance</button>
-    <button onclick="showTab('fees')">Fees</button>
-    
-    <!-- Players Tab -->
-    <div id="players" class="tab active">
-        <h2>Players</h2>
-        <input id="name" placeholder="Name">
-        <input id="age" placeholder="Age" type="number">
-        <button onclick="addPlayer()">Add Player</button>
-        <div id="playerList"></div>
+  <header>
+    <img src="https://raw.githubusercontent.com/<YOUR-USERNAME>/lolo-badminton-app/main/logo.png" alt="" width="56" onerror="this.style.display='none'">
+    <div>
+      <h1>LOLO Badminton Academy — Management</h1>
+      <div class="small">Simple web app hosted on GitHub Pages. Edit data in <code>/data</code> folder on GitHub.</div>
     </div>
-    
-    <!-- Attendance Tab -->
-    <div id="attendance" class="tab">
-        <h2>Attendance</h2>
-        <input type="date" id="attDate">
-        <div id="attPlayers"></div>
-        <button onclick="saveAttendance()">Save</button>
-    </div>
-    
-    <!-- Fees Tab -->
-    <div id="fees" class="tab">
-        <h2>Fees</h2>
-        <select id="month">
-            <option>Jan</option><option>Feb</option><option>Mar</option>
-            <!-- Add more months -->
-        </select>
-        <div id="feesList"></div>
-    </div>
+  </header>
 
-    <script>
-        let players = JSON.parse(localStorage.getItem('players')) || [];
-        
-        function showTab(tabName) {
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-            document.getElementById(tabName).classList.add('active');
-            if(tabName === 'players') showPlayers();
-            if(tabName === 'attendance') showAttendance();
-            if(tabName === 'fees') showFees();
-        }
-        
-        function addPlayer() {
-            players.push({
-                id: Date.now(),
-                name: document.getElementById('name').value,
-                age: document.getElementById('age').value
-            });
-            localStorage.setItem('players', JSON.stringify(players));
-            showPlayers();
-        }
-        
-        function showPlayers() {
-            document.getElementById('playerList').innerHTML = players.map(player => 
-                `<div class="player">${player.name} (Age: ${player.age})</div>`
-            ).join('');
-        }
-        
-        function showAttendance() {
-            let html = '';
-            players.forEach(player => {
-                html += `<div><input type="checkbox" id="att-${player.id}"> ${player.name}</div>`;
-            });
-            document.getElementById('attPlayers').innerHTML = html;
-        }
-        
-        showTab('players');
-    </script>
+  <div class="controls">
+    <input id="q" type="search" placeholder="Search players by name or phone" />
+    <button id="refresh">Refresh data</button>
+    <button id="downloadCsv">Download players CSV</button>
+    <a id="editPlayers" class="small" target="_blank" rel="noopener">Edit players.json on GitHub</a>
+  </div>
+
+  <div id="content">
+    <div id="loading" class="note">Loading players…</div>
+    <table id="playersTable" style="display:none">
+      <thead>
+        <tr><th>Name</th><th>Phone</th><th>Fee (MVR)</th><th>Notes</th></tr>
+      </thead>
+      <tbody id="playersBody"></tbody>
+    </table>
+    <div id="empty" class="note" style="display:none">No players found. Add players in <code>data/players.json</code>.</div>
+  </div>
+
+<script>
+  // Replace placeholders in this file after you create repo:
+  const GITHUB_RAW_BASE = "https://raw.githubusercontent.com/<YOUR-USERNAME>/lolo-badminton-app/main";
+  const PLAYERS_FILE = GITHUB_RAW_BASE + "/data/players.json";
+  const PLAYERS_GITHUB_EDIT = "https://github.com/<YOUR-USERNAME>/lolo-badminton-app/edit/main/data/players.json";
+
+  const qInput = document.getElementById('q');
+  const refreshBtn = document.getElementById('refresh');
+  const downloadBtn = document.getElementById('downloadCsv');
+  const editLink = document.getElementById('editPlayers');
+  const loading = document.getElementById('loading');
+  const table = document.getElementById('playersTable');
+  const body = document.getElementById('playersBody');
+  const empty = document.getElementById('empty');
+
+  editLink.href = PLAYERS_GITHUB_EDIT;
+  async function loadPlayers() {
+    loading.style.display = 'block';
+    table.style.display = 'none';
+    empty.style.display = 'none';
+    try {
+      const r = await fetch(PLAYERS_FILE + '?ts=' + Date.now());
+      if (!r.ok) throw new Error('Failed to fetch players.json: ' + r.status);
+      const players = await r.json();
+      renderPlayers(players);
+    } catch (err) {
+      loading.textContent = 'Error loading players: ' + err.message + ' — check data/players.json in your repo.';
+      console.error(err);
+    }
+  }
+
+  function renderPlayers(players) {
+    loading.style.display = 'none';
+    body.innerHTML = '';
+    if (!Array.isArray(players) || players.length === 0) {
+      empty.style.display = 'block';
+      return;
+    }
+    table.style.display = 'table';
+    const q = (qInput.value || '').toLowerCase().trim();
+    const list = players.filter(p => {
+      if (!q) return true;
+      return (p.name || '').toLowerCase().includes(q) || (p.phone || '').toLowerCase().includes(q);
+    });
+    if (list.length === 0) {
+      empty.style.display = 'block';
+      table.style.display = 'none';
+      return;
+    }
+    list.forEach(p => {
+      const tr = document.createElement('tr');
+      const name = document.createElement('td'); name.textContent = p.name || ''; tr.appendChild(name);
+      const phone = document.createElement('td'); phone.textContent = p.phone || ''; tr.appendChild(phone);
+      const fee = document.createElement('td'); fee.textContent = (p.fee!=null ? p.fee : ''); tr.appendChild(fee);
+      const notes = document.createElement('td'); notes.textContent = p.notes || ''; tr.appendChild(notes);
+      body.appendChild(tr);
+    });
+  }
+
+  function downloadCSVFromPlayers(players) {
+    if (!Array.isArray(players)) return;
+    const header = ['name','phone','fee','notes'];
+    const rows = players.map(p => [p.name||'', p.phone||'', p.fee||'', (p.notes||'').replace(/(\r\n|\n|\r)/gm," ")]);
+    const csv = [header.join(','), ...rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(','))].join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'lolo_players.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  refreshBtn.addEventListener('click', loadPlayers);
+  qInput.addEventListener('input', () => loadPlayers()); // quick live-filter (re-fetch ensures latest)
+  downloadBtn.addEventListener('click', async () => {
+    loading.style.display = 'block';
+    try {
+      const r = await fetch(PLAYERS_FILE + '?ts=' + Date.now());
+      const players = await r.json();
+      downloadCSVFromPlayers(players);
+    } catch (e) {
+      alert('Failed to fetch players: ' + e.message);
+    } finally {
+      loading.style.display = 'none';
+    }
+  });
+
+  // initial load
+  loadPlayers();
+</script>
 </body>
 </html>
