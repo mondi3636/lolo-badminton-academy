@@ -9,3 +9,9 @@ A simple web app to manage badminton academy operations including players, atten
 - **Fees Management**: Track monthly fee payments with automatic calculations
 - **Sessions & Coaches**: Schedule training sessions and assign coaches
 
+## Setup Instructions
+
+1. **Create GitHub Repository**
+   ```bash
+   git clone https://github.com/your-username/badminton-academy.git
+   cd badminton-academy
